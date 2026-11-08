@@ -6,7 +6,6 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// Подключаем In-Memory кэширование для ускорения редиректов
 builder.Services.AddMemoryCache();
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") 
@@ -17,7 +16,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 var app = builder.Build();
 
-// Автоматическое создание таблиц в БД при старте (удобно для быстрого запуска)
+
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -30,7 +29,6 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-// 1. Создание короткой ссылки (с поддержкой Custom Alias и времени жизни)
 app.MapPost("/api/shorten", async (ShortenRequest request, AppDbContext db, HttpContext httpContext) =>
 {
     if (!Uri.TryCreate(request.Url, UriKind.Absolute, out _))
@@ -77,7 +75,7 @@ app.MapPost("/api/shorten", async (ShortenRequest request, AppDbContext db, Http
     });
 });
 
-// 2. Редирект по коду с использованием IMemoryCache и записью детальной аналитики
+
 app.MapGet("/{code}", async (string code, AppDbContext db, IMemoryCache cache, HttpContext httpContext) =>
 {
     var entry = await db.ShortenedUrls.FirstOrDefaultAsync(u => u.ShortCode == code);
@@ -87,10 +85,8 @@ app.MapGet("/{code}", async (string code, AppDbContext db, IMemoryCache cache, H
     if (entry.ExpiresAtUtc.HasValue && entry.ExpiresAtUtc.Value < DateTime.UtcNow)
         return Results.BadRequest(new { error = "Срок действия ссылки истек." });
 
-    // Кэшируем оригинальный URL на 10 минут
     cache.Set($"url_{code}", entry.OriginalUrl, TimeSpan.FromMinutes(10));
 
-    // Обновляем счетчик и сохраняем лог перехода
     entry.ClickCount++;
     db.ClickEvents.Add(new ClickEvent
     {
@@ -105,7 +101,6 @@ app.MapGet("/{code}", async (string code, AppDbContext db, IMemoryCache cache, H
     return Results.Redirect(entry.OriginalUrl);
 });
 
-// 3. Детальная аналитика по ссылке
 app.MapGet("/api/stats/{code}", async (string code, AppDbContext db) =>
 {
     var entry = await db.ShortenedUrls
@@ -130,7 +125,6 @@ app.MapGet("/api/stats/{code}", async (string code, AppDbContext db) =>
     });
 });
 
-// 4. Удаление ссылки
 app.MapDelete("/api/{code}", async (string code, AppDbContext db, IMemoryCache cache) =>
 {
     var entry = await db.ShortenedUrls.FirstOrDefaultAsync(u => u.ShortCode == code);
