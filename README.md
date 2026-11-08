@@ -1,4 +1,6 @@
 # UrlShortenerApi
+<img width="1561" height="614" alt="image" src="https://github.com/user-attachments/assets/2789428b-2fac-4097-8579-3ce7d1bd620a" />
+
 # URL Shortener & Analytics API
 
 REST API сервис для сокращения ссылок с поддержкой кастомных алиасов, времени жизни (TTL), кэширования и детальной аналитики переходов.
